@@ -1,0 +1,12 @@
+.venv/
+.build/
+build/
+dist/
+__pycache__/
+.pytest_cache/
+.DS_Store
+/*.stl
+/*.gcode
+/*.3mf
+/*-report.json
+/result.json

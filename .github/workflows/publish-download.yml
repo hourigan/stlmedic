@@ -1,0 +1,67 @@
+name: Publish 0.2.1 downloads
+
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/publish-download.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-stlmedic-0.2.1
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      RELEASE_TAG: v0.2.1
+      SOURCE_COMMIT: 39bbeb298a4df860e5b4339e605c64c42d6d3544
+    steps:
+      - name: Fetch and verify the prepared release files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir release-files
+          cd release-files
+          base='https://downloads.stlmedic.com/releases/0.2.1'
+          curl --fail --location --retry 3 --max-time 300 "$base/STL-Medic-0.2.1-macOS-arm64.zip" -o STL-Medic-0.2.1-macOS-arm64.zip
+          curl --fail --location --retry 3 --max-time 300 "$base/STL-Medic-0.2.1-source.zip" -o STL-Medic-0.2.1-source.zip
+          cat > SHA256SUMS.txt <<'CHECKSUMS'
+          4f2556d7c00708a7a9ec4471603515a39fe3f0c54a395e2bc899322b964d9fae  STL-Medic-0.2.1-macOS-arm64.zip
+          601ee29c8103a3413ffe7825d0137ca7a44a2f98f4478462261acaa6530ca742  STL-Medic-0.2.1-source.zip
+          CHECKSUMS
+          sha256sum --check SHA256SUMS.txt
+
+      - name: Publish verified files as GitHub release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cat > release-notes.md <<'NOTES'
+          STL Medic 0.2.1 is a native macOS application for inspecting and repairing STL meshes before slicing.
+
+          **Requirements:** Apple Silicon Mac, macOS 14 Sonoma or later.
+
+          Download `STL-Medic-0.2.1-macOS-arm64.zip`, extract it, and move `STL Medic.app` to Applications. Python and Homebrew are not required to run the packaged app.
+
+          **Development preview:** This build is ad-hoc signed. It is not Developer ID signed or notarized, and macOS may block opening it. Only approve software you trust. Always review repaired geometry and sliced layers before printing.
+
+          The `source.zip` includes matching application source, build scripts, pinned Python dependency sources, PyMeshLab/MeshLab/VCG/pybind11 sources, and bundled Qt component sources. The original application code is AGPL-3.0-or-later; dependencies retain their own licenses. See `SHA256SUMS.txt` to verify the ZIPs.
+
+          Website: https://stlmedic.com
+          NOTES
+          state="$(gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft 2>/dev/null || true)"
+          if [ "$state" = false ]; then
+            echo 'Release is already public; preserving its assets.'
+            exit 0
+          fi
+          if [ "$state" != true ]; then
+            gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --target "$SOURCE_COMMIT" --draft --prerelease --title 'STL Medic 0.2.1 — development preview' --notes-file release-notes.md
+          fi
+          gh release upload "$RELEASE_TAG" release-files/STL-Medic-0.2.1-macOS-arm64.zip release-files/STL-Medic-0.2.1-source.zip release-files/SHA256SUMS.txt --repo "$GITHUB_REPOSITORY" --clobber
+          gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease

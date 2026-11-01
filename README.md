@@ -2,6 +2,8 @@
 
 A native macOS application for inspecting and repairing STL meshes before slicing in Bambu Studio. Built with SwiftUI, SceneKit, and an offline Python geometry engine.
 
+The current source version is **1.0.0 (build 4)**. The production release is pending Developer ID signing and Apple notarization; no 1.0.0 download is published yet. See [the signing guide](docs/SIGNING.md) for the release steps. The published 0.2.1 download remains a development preview.
+
 ## Run
 
 Open **`dist/STL Medic.app`**. The built app includes its own Python runtime and dependencies; Python, Homebrew, and network access are not needed to use it. This is a local, ad-hoc signed development build for the Mac architecture it was built on, not a notarized release.
